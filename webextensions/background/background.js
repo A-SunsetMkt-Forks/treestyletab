@@ -231,7 +231,6 @@ async function waitUntilCompletelyRestored() {
         browser.sessions.getTabValue(tab.id, Constants.kWINDOW_STATE_CACHED_TABS)
           .catch(ApiTabs.createErrorSuppressor())
           .then(cache => mPreloadedCaches.set(`tab-${tab.id}`, cache));
-        //uniqueId = uniqueId && uniqueId.id || '?'; // not used
         timeout = setTimeout(resolver, 100);
       };
       browser.tabs.onCreated.addListener(onNewTabRestored);
@@ -414,7 +413,7 @@ async function updateInsertionPosition(tab) {
     browser.sessions.setTabValue(
       tab.id,
       Constants.kPERSISTENT_INSERT_AFTER,
-      prev.$TST.uniqueId.id
+      (await prev.$TST.promisedUniqueId).id
     ).catch(ApiTabs.createErrorSuppressor(
       ApiTabs.handleMissingTabError // The tab can be closed while waiting.
     ));
@@ -439,7 +438,7 @@ async function updateInsertionPosition(tab) {
     browser.sessions.setTabValue(
       tab.id,
       Constants.kPERSISTENT_INSERT_BEFORE,
-      next.$TST.uniqueId.id
+      (await next.$TST.promisedUniqueId).id
     ).catch(ApiTabs.createErrorSuppressor(
       ApiTabs.handleMissingTabError // The tab can be closed while waiting.
     ));
@@ -482,7 +481,7 @@ async function updateAncestors(tab) {
   if (!TabsStore.ensureLivingTab(tab))
     return;
 
-  const ancestors = tab.$TST.ancestors.map(ancestor => ancestor.$TST.uniqueId.id);
+  const ancestors = await Promise.all(tab.$TST.ancestors.map(ancestor => ancestor.$TST.promisedUniqueId.then(id => id.id)));
   log(`updateAncestors: save persistent ancestors for ${tab.id}: `, ancestors);
   browser.sessions.setTabValue(
     tab.id,
@@ -522,7 +521,7 @@ async function updateChildren(tab) {
   if (!TabsStore.ensureLivingTab(tab))
     return;
 
-  const children = tab.$TST.children.map(child => child.$TST.uniqueId.id);
+  const children = await Promise.all(tab.$TST.children.map(child => child.$TST.promisedUniqueId.then(id => id.id)));
   log(`updateChildren: save persistent children for ${tab.id}: `, children);
   browser.sessions.setTabValue(
     tab.id,

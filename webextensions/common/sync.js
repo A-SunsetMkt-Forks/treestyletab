@@ -450,7 +450,7 @@ export function isSendableTab(tab) {
   return !isSendableTab.unsendableUrlMatcher.test(tab.url);
 }
 
-export function sendTabsToDevice(tabs, { to, recursively } = {}) {
+export async function sendTabsToDevice(tabs, { to, recursively } = {}) {
   if (recursively)
     tabs = Tab.collectRootTabs(tabs).map(tab => [tab, ...tab.$TST.descendants]).flat();
   tabs = tabs.filter(isSendableTab);
@@ -458,7 +458,7 @@ export function sendTabsToDevice(tabs, { to, recursively } = {}) {
   if (mExternalProvider)
     return mExternalProvider.sendTabsToDevice(tabs, to);
 
-  sendMessage(to, getTabsDataToSend(tabs));
+  sendMessage(to, await getTabsDataToSend(tabs));
 
   const multiple = tabs.length > 1 ? '_multiple' : '';
   notify({
@@ -482,7 +482,7 @@ export async function sendTabsToAllDevices(tabs, { recursively } = {}) {
   if (mExternalProvider)
     return mExternalProvider.sendTabsToAllDevices(tabs);
 
-  const data = getTabsDataToSend(tabs);
+  const data = await getTabsDataToSend(tabs);
   const devices = await getOtherDevices();
   for (const device of devices) {
     sendMessage(device.id, data);
@@ -496,7 +496,8 @@ export async function sendTabsToAllDevices(tabs, { recursively } = {}) {
   });
 }
 
-function getTabsDataToSend(tabs) {
+async function getTabsDataToSend(tabs) {
+  await Promise.all(tabs.map(tab => tab.$TST.promisedUniqueId));
   return {
     type:       Constants.kSYNC_DATA_TYPE_TABS,
     tabs:       tabs.map(tab => ({ url: tab.url, cookieStoreId: tab.cookieStoreId })),

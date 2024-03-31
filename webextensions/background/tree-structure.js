@@ -71,7 +71,9 @@ async function saveTreeStructure(windowId) {
   if (!win)
     return;
 
-  const structure = TreeBehavior.getTreeStructureFromTabs(Tab.getAllTabs(windowId));
+  const tabs = Tab.getAllTabs(windowId);
+  await Promise.all(tabs.map(tab => tab.$TST.promisedUniqueId));
+  const structure = await TreeBehavior.getTreeStructureFromTabs(tabs);
   browser.sessions.setWindowValue(
     windowId,
     Constants.kWINDOW_STATE_TREE_STRUCTURE,
@@ -92,12 +94,11 @@ export async function loadTreeStructure(windows, restoredFromCacheResults) {
     let windowStateCompletelyApplied = false;
     try {
       const structure = await browser.sessions.getWindowValue(win.id, Constants.kWINDOW_STATE_TREE_STRUCTURE).catch(ApiTabs.createErrorHandler());
-      let uniqueIds = tabs.map(tab => tab.$TST.uniqueId && tab.$TST.uniqueId || '?');
+      let uniqueIds = await Promise.all(tabs.map(tab => tab.$TST.promisedUniqueId.then(uniqueId => uniqueId?.id)));
       MetricsData.add('loadTreeStructure: read stored data');
       if (structure &&
           structure.length > 0 &&
           structure.length <= tabs.length) {
-        uniqueIds = uniqueIds.map(id => id.id);
         let tabsOffset;
         if (structure[0].id) {
           const structureSignature = toLines(structure, item => item.id);
@@ -183,7 +184,7 @@ async function reserveToAttachTabFromRestoredInfo(tab, options = {}) {
     reserveToAttachTabFromRestoredInfo.waiting = null;
     const tasks = reserveToAttachTabFromRestoredInfo.tasks.slice(0);
     reserveToAttachTabFromRestoredInfo.tasks = [];
-    const uniqueIds = tasks.map(task => task.tab.$TST.uniqueId);
+    const uniqueIds = await Promise.all(tasks.map(task => task.tab.$TST.promisedUniqueId));
     const bulk = tasks.length > 1;
     const attachedResults = await Promise.all(uniqueIds.map((uniqueId, index) => {
       const task = tasks[index];
@@ -219,7 +220,7 @@ async function attachTabFromRestoredInfo(tab, options = {}) {
   let uniqueId, insertBefore, insertAfter, insertAfterLegacy, ancestors, children, states, collapsed /* for backward compatibility */;
   // eslint-disable-next-line prefer-const
   [uniqueId, insertBefore, insertAfter, insertAfterLegacy, ancestors, children, states, collapsed] = await Promise.all([
-    options.uniqueId || tab.$TST.uniqueId || tab.$TST.promisedUniqueId,
+    options.uniqueId || tab.$TST.promisedUniqueId,
     browser.sessions.getTabValue(tab.id, Constants.kPERSISTENT_INSERT_BEFORE).catch(ApiTabs.createErrorHandler()),
     browser.sessions.getTabValue(tab.id, Constants.kPERSISTENT_INSERT_AFTER).catch(ApiTabs.createErrorHandler()),
     // This legacy should be removed after legacy data are cleared enough, maybe after Firefox 128 is released.
@@ -495,7 +496,7 @@ Tab.onRemoved.addListener((_tab, _info) => {
     Tab.onChangeMultipleTabsRestorability.dispatch(newlyRestorable);
 });
 
-Tab.onMultipleTabsRemoving.addListener((tabs, { triggerTab, originalStructure } = {}) => {
+Tab.onMultipleTabsRemoving.addListener(async (tabs, { triggerTab, originalStructure } = {}) => {
   if (triggerTab)
     tabs = [triggerTab, ...tabs];
   mPendingRecentlyClosedTabsInfo.tabs = tabs.map(tab => ({
@@ -506,6 +507,8 @@ Tab.onMultipleTabsRemoving.addListener((tabs, { triggerTab, originalStructure } 
     url:           tab.url,
     cookieStoreId: tab.cookieStoreId
   }));
+  if (!originalStructure)
+    await Promise.all(tabs.map(tab => tab.$TST.promisedUniqueId));
   mPendingRecentlyClosedTabsInfo.structure = originalStructure || TreeBehavior.getTreeStructureFromTabs(tabs, {
     full:                 true,
     keepParentOfRootTabs: true

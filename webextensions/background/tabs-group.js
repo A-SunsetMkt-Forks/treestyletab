@@ -558,7 +558,7 @@ Tab.onPinned.addListener(async tab => {
       // Otherwise it should be treated just as a temporary group tab to group children.
       title:       tab.$TST.isGroupTab ? tab.title : browser.i18n.getMessage('groupTab_fromPinnedTab_label', tab.title),
       temporary:   !tab.$TST.isGroupTab,
-      openerTabId: tab.$TST.uniqueId.id,
+      openerTabId: tab.$TST.uniqueId.id || (await tab.$TST.promisedUniqueId).id,
       parent,
       withDescendants: true,
     });

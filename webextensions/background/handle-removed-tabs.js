@@ -65,6 +65,7 @@ Tab.onRemoving.addListener(async (tab, removeInfo = {}) => {
       broadcast: false // because the tab is going to be closed, broadcasted Tree.collapseExpandSubtree can be ignored.
     });
 
+  await Promise.all([tab, ...tab.$TST.descendants].map(tab => tab.$TST.promisedUniqueId));
   const postProcessParams = {
     windowId:     tab.windowId,
     removedTab:   tab.$TST.export(true),

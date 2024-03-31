@@ -89,6 +89,11 @@ async function tryDetectTabBunches(win) {
 
   win.openedNewTabs.clear();
 
+  await Promise.all(tabReferences.map(async tabReference => {
+    const tab = Tab.get(tabReference.id);
+    await tab?.$TST?.promisedUniqueId;
+  }));
+
   tabReferences = tabReferences.filter(tabReference => {
     if (!tabReference.id)
       return false;

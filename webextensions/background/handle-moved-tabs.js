@@ -52,10 +52,8 @@ Tab.onCreated.addListener((tab, info = {}) => {
         info.movedBySelfWhileCreation) &&
       (tab.$TST.nearestCompletelyOpenedNormalFollowingTab ||
        tab.$TST.nearestCompletelyOpenedNormalPrecedingTab ||
-       (info.treeForActionDetection &&
-        info.treeForActionDetection.target &&
-        (info.treeForActionDetection.target.next ||
-         info.treeForActionDetection.target.previous)))) {
+       (info.treeForActionDetection?.target?.next ||
+        info.treeForActionDetection?.target?.previous))) {
     tryFixupTreeForInsertedTab(tab, {
       toIndex:   tab.index,
       fromIndex: Tab.getLastTab(tab.windowId).index,

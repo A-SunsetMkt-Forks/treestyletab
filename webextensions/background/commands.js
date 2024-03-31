@@ -659,7 +659,8 @@ export async function moveTabsWithStructure(tabs, params = {}) {
     log('=> already placed at expected position');
 
   /*
-  const treeStructure = getTreeStructureFromTabs(movedTabs);
+  await Promise.all(movedTabs.map(tab => tab.$TST.promisedUniqueId));
+  const treeStructure = TreeBehavior.getTreeStructureFromTabs(movedTabs);
 
   const newTabs;
   const replacedGroupTabs = Tab.doAndGetNewTabs(() => {

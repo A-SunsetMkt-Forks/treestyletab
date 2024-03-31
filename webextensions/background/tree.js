@@ -1447,6 +1447,7 @@ export async function moveTabs(tabs, options = {}) {
   options.insertAfter = options.insertAfter || Tab.getLastTab(destinationWindowId);
 
   let movedTabs = tabs;
+  await Promise.all(tabs.map(tab => tab.$TST.promisedUniqueId));
   const structure = TreeBehavior.getTreeStructureFromTabs(tabs);
   log('original tree structure: ', structure);
 

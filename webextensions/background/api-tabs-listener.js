@@ -506,7 +506,7 @@ async function onNewTabTracked(tab, info) {
     metric.add('uniqueId resolved');
 
     if (!TabsStore.ensureLivingTab(tab)) { // it can be removed while waiting
-      onCompleted(uniqueId);
+      onCompleted();
       tab.$TST.rejectOpened();
       Tab.untrack(tab.id);
       warnTabDestroyedWhileWaiting(tab.id, tab);
@@ -527,6 +527,7 @@ async function onNewTabTracked(tab, info) {
     if (duplicated)
       tab.$TST.addState(Constants.kTAB_STATE_DUPLICATED);
 
+    /*
     const maybeNeedToFixupTree = (
       (info.mayBeReplacedWithContainer ||
        (!duplicated &&
@@ -538,6 +539,7 @@ async function onNewTabTracked(tab, info) {
     // This operation takes too much time so it should be skipped if unnecessary.
     // See also: https://github.com/piroor/treestyletab/issues/2278#issuecomment-521534290
     treeForActionDetection = maybeNeedToFixupTree ? Tree.snapshotForActionDetection(tab) : null;
+    */
 
     if (bypassTabControl)
       win.bypassTabControlCount--;
@@ -552,7 +554,10 @@ async function onNewTabTracked(tab, info) {
     if (duplicatedInternally)
       win.duplicatingTabsCount--;
 
-    if (restored) {
+    tab.$TST.promisedUniqueId.then(async uniqueId => {
+      if (!uniqueId.restored)
+        return;
+
       win.restoredCount = win.restoredCount || 0;
       win.restoredCount++;
       if (!win.promisedAllTabsRestored) {
@@ -575,7 +580,6 @@ async function onNewTabTracked(tab, info) {
             windowId: tab.windowId,
             restoredCount: lastCount,
           });
-          metric.add('Tab.onWindowRestoring proceeded');
           return lastCount;
         });
       }
@@ -585,12 +589,11 @@ async function onNewTabTracked(tab, info) {
         windowId: tab.windowId
       });
       await win.promisedAllTabsRestored;
-      log(`onNewTabTracked(${dumpTab(tab)}): continued for restored tab`);
-      metric.add('win.promisedAllTabsRestored resolved');
-    }
+      log(`onNewTabTracked(${dumpTab(tab)}): all tabs are restored`);
+    });
     if (!TabsStore.ensureLivingTab(tab)) {
       log(`onNewTabTracked(${dumpTab(tab)}):  => aborted`);
-      onCompleted(uniqueId);
+      onCompleted();
       tab.$TST.rejectOpened();
       Tab.untrack(tab.id);
       warnTabDestroyedWhileWaiting(tab.id, tab);
@@ -606,8 +609,8 @@ async function onNewTabTracked(tab, info) {
       openedWithCookieStoreId,
       mayBeReplacedWithContainer,
       maybeOrphan,
-      restored,
-      duplicated,
+      //restored,
+      //duplicated,
       duplicatedInternally,
       activeTab,
       fromExternal
@@ -622,7 +625,7 @@ async function onNewTabTracked(tab, info) {
 
     if (!TabsStore.ensureLivingTab(tab)) {
       log(`onNewTabTracked(${dumpTab(tab)}):  => aborted`);
-      onCompleted(uniqueId);
+      onCompleted();
       tab.$TST.rejectOpened();
       Tab.untrack(tab.id);
       warnTabDestroyedWhileWaiting(tab.id, tab);
@@ -653,7 +656,7 @@ async function onNewTabTracked(tab, info) {
     }
 
     if (!TabsStore.ensureLivingTab(tab)) { // it can be removed while waiting
-      onCompleted(uniqueId);
+      onCompleted();
       tab.$TST.rejectOpened();
       Tab.untrack(tab.id);
       warnTabDestroyedWhileWaiting(tab.id, tab);
@@ -671,11 +674,11 @@ async function onNewTabTracked(tab, info) {
       mayBeReplacedWithContainer,
       movedBySelfWhileCreation: moved,
       skipFixupTree,
-      restored,
-      duplicated,
+      //restored,
+      //duplicated,
       duplicatedInternally,
       originalTab: duplicated && Tab.get(uniqueId.originalTabId),
-      treeForActionDetection,
+      //treeForActionDetection,
       fromExternal
     });
     tab.$TST.resolveOpened();
@@ -691,37 +694,41 @@ async function onNewTabTracked(tab, info) {
     });
     metric.add('kCOMMAND_NOTIFY_TAB_CREATED notified');
 
-    if (!duplicated &&
-        restored) {
+    tab.$TST.promisedUniqueId.then(uniqueId => {
+      if (uniqueId.duplicated ||
+          !uniqueId.restored)
+        return;
       tab.$TST.addState(Constants.kTAB_STATE_RESTORED);
       Tab.onRestored.dispatch(tab);
       checkRecycledTab(win.id);
-    }
+    });
 
-    onCompleted(uniqueId);
+    onCompleted();
     tab.$TST.removeState(Constants.kTAB_STATE_CREATING);
     metric.add('remove creating state');
 
     if (TSTAPI.hasListenerForMessageType(TSTAPI.kNOTIFY_NEW_TAB_PROCESSED)) {
-      const cache = {};
-      TSTAPI.broadcastMessage({
-        type:      TSTAPI.kNOTIFY_NEW_TAB_PROCESSED,
-        tab,
-        originalTab: duplicated && Tab.get(uniqueId.originalTabId),
-        restored,
-        duplicated,
-        fromExternal,
-      }, { tabProperties: ['tab', 'originalTab'], cache }).catch(_error => {});
-      TSTAPI.clearCache(cache);
-      metric.add('API broadcaster');
+      tab.$TST.promisedUniqueId.then(uniqueId => {
+        const cache = {};
+        TSTAPI.broadcastMessage({
+          type:      TSTAPI.kNOTIFY_NEW_TAB_PROCESSED,
+          tab,
+          originalTab: uniqueId.duplicated && Tab.get(uniqueId.originalTabId),
+          restored:    uniqueId.restored,
+          duplicated:  uniqueId.duplicated,
+          fromExternal,
+        }, { tabProperties: ['tab', 'originalTab'], cache }).catch(_error => {});
+        TSTAPI.clearCache(cache);
+      });
     }
 
+    /*
     // tab can be changed while creating!
     const renewedTab = await browser.tabs.get(tab.id).catch(ApiTabs.createErrorHandler(ApiTabs.handleMissingTabError));
     metric.add('renewedTab');
     if (!renewedTab) {
       log(`onNewTabTracked(${dumpTab(tab)}): tab ${tab.id} is closed while tracking`);
-      onCompleted(uniqueId);
+      onCompleted();
       tab.$TST.rejectOpened();
       Tab.untrack(tab.id);
       warnTabDestroyedWhileWaiting(tab.id, tab);
@@ -775,9 +782,10 @@ async function onNewTabTracked(tab, info) {
       onUpdated(tab.id, changedProps, renewedTab);
       metric.add('onUpdated notified');
     }
+    */
 
     const currentActiveTab = Tab.getActiveTab(tab.windowId);
-    if (renewedTab.active &&
+    if (/*renewedTab*/tab.active &&
         currentActiveTab.id != tab.id) {
       onActivated({
         tabId:         tab.id,
@@ -816,16 +824,18 @@ function checkRecycledTab(windowId) {
   for (const tab of possibleRecycledTabs) {
     if (!TabsStore.ensureLivingTab(tab))
       continue;
-    const currentId = tab.$TST.uniqueId.id;
-    tab.$TST.updateUniqueId().then(uniqueId => {
-      if (!TabsStore.ensureLivingTab(tab) ||
-          !uniqueId.restored ||
-          uniqueId.id == currentId ||
-          Constants.kTAB_STATE_RESTORED in tab.$TST.states)
-        return;
-      log('A recycled tab is detected: ', dumpTab(tab));
-      tab.$TST.addState(Constants.kTAB_STATE_RESTORED);
-      Tab.onRestored.dispatch(tab);
+    tab.$TST.promisedUniqueId.then(uniqueId => {
+      const currentId = uniqueId.id;
+      tab.$TST.updateUniqueId().then(uniqueId => {
+        if (!TabsStore.ensureLivingTab(tab) ||
+            !uniqueId.restored ||
+            uniqueId.id == currentId ||
+            Constants.kTAB_STATE_RESTORED in tab.$TST.states)
+          return;
+        log('A recycled tab is detected: ', dumpTab(tab));
+        tab.$TST.addState(Constants.kTAB_STATE_RESTORED);
+        Tab.onRestored.dispatch(tab);
+      });
     });
   }
 }
@@ -1194,6 +1204,7 @@ async function onDetached(tabId, detachInfo) {
       oldWindow.toBeDetachedTabs.delete(tabId);
 
     const descendants = oldTab.$TST.descendants;
+    await Promise.all([oldTab, ...descendants].map(tab => tab.$TST.promisedUniqueId));
     const info = {
       ...detachInfo,
       byInternalOperation,

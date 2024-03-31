@@ -398,11 +398,11 @@ function onMessage(message, sender) {
         while (mInitializationPhase < PHASE_BACKGROUND_READY) {
           await wait(10);
         }
-        const structure = TreeBehavior.getTreeStructureFromTabs(
-          message.windowId ?
-            Tab.getAllTabs(message.windowId) :
-            message.tabIds.map(id => Tab.get(id))
-        );
+        const tabs = message.windowId ?
+          Tab.getAllTabs(message.windowId) :
+          message.tabIds.map(id => Tab.get(id));
+        await Promise.all(tabs.map(tab => tab.$TST.promisedUniqueId));
+        const structure = TreeBehavior.getTreeStructureFromTabs(tabs);
         return { structure };
       })();
 
@@ -823,7 +823,8 @@ function onMessageExternal(message, sender) {
     case TSTAPI.kGET_TREE_STRUCTURE:
       return (async () => {
         const tabs = await TSTAPI.getTargetTabs(message, sender);
-        return Promise.resolve(TreeBehavior.getTreeStructureFromTabs(Array.from(tabs)));
+        await Promise.all(Array.from(tabs, tab => tab.$TST.promisedUniqueId));
+        return TreeBehavior.getTreeStructureFromTabs(Array.from(tabs));
       })();
 
     case TSTAPI.kSET_TREE_STRUCTURE:
