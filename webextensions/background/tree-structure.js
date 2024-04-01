@@ -94,7 +94,7 @@ export async function loadTreeStructure(windows, restoredFromCacheResults) {
     let windowStateCompletelyApplied = false;
     try {
       const structure = await browser.sessions.getWindowValue(win.id, Constants.kWINDOW_STATE_TREE_STRUCTURE).catch(ApiTabs.createErrorHandler());
-      let uniqueIds = await Promise.all(tabs.map(tab => tab.$TST.promisedUniqueId.then(uniqueId => uniqueId?.id)));
+      const uniqueIds = await Promise.all(tabs.map(tab => tab.$TST.promisedUniqueId.then(uniqueId => uniqueId?.id)));
       MetricsData.add('loadTreeStructure: read stored data');
       if (structure &&
           structure.length > 0 &&
