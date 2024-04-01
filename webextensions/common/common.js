@@ -425,6 +425,7 @@ export const configs = new Configs({
   generatedTabElementsPoolLifetimeMsec: 5 * 1000,
   undoMultipleTabsClose: true,
   allowDragNewTabButton: true,
+  syncHandleNewTabs: false,
   newTabButtonDragGestureModifiers: 'shift',
   migratedBookmarkUrls: [],
   lastDragOverSidebarOwnerWindowId: null,

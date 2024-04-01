@@ -502,8 +502,11 @@ async function onNewTabTracked(tab, info) {
       metric.add('setTabActive');
     }
 
-    const uniqueId = await tab.$TST.promisedUniqueId;
-    metric.add('uniqueId resolved');
+    let uniqueId;
+    if (!configs.syncHandleNewTabs) {
+      uniqueId = await tab.$TST.promisedUniqueId;
+      metric.add('uniqueId resolved');
+    }
 
     if (!TabsStore.ensureLivingTab(tab)) { // it can be removed while waiting
       onCompleted();
@@ -520,14 +523,15 @@ async function onNewTabTracked(tab, info) {
     });
     metric.add('TabsUpdate.updateTab proceeded');
 
-    const duplicated = duplicatedInternally || uniqueId.duplicated;
-    const restored   = uniqueId.restored;
+    const duplicated = duplicatedInternally || uniqueId?.duplicated;
+    const restored   = uniqueId?.restored;
     const skipFixupTree = !nextTab;
     log(`onNewTabTracked(${dumpTab(tab)}): `, { duplicated, restored, skipFixupTree });
     if (duplicated)
       tab.$TST.addState(Constants.kTAB_STATE_DUPLICATED);
 
-    /*
+    let treeForActionDetection = null;
+    if (!configs.syncHandleNewTabs) {
     const maybeNeedToFixupTree = (
       (info.mayBeReplacedWithContainer ||
        (!duplicated &&
@@ -539,7 +543,7 @@ async function onNewTabTracked(tab, info) {
     // This operation takes too much time so it should be skipped if unnecessary.
     // See also: https://github.com/piroor/treestyletab/issues/2278#issuecomment-521534290
     treeForActionDetection = maybeNeedToFixupTree ? Tree.snapshotForActionDetection(tab) : null;
-    */
+    }
 
     if (bypassTabControl)
       win.bypassTabControlCount--;
@@ -677,8 +681,8 @@ async function onNewTabTracked(tab, info) {
       //restored,
       //duplicated,
       duplicatedInternally,
-      originalTab: duplicated && Tab.get(uniqueId.originalTabId),
-      //treeForActionDetection,
+      originalTab: duplicated && Tab.get(uniqueId?.originalTabId),
+      treeForActionDetection,
       fromExternal
     });
     tab.$TST.resolveOpened();
@@ -722,7 +726,7 @@ async function onNewTabTracked(tab, info) {
       });
     }
 
-    /*
+    if (!configs.syncHandleNewTabs) {
     // tab can be changed while creating!
     const renewedTab = await browser.tabs.get(tab.id).catch(ApiTabs.createErrorHandler(ApiTabs.handleMissingTabError));
     metric.add('renewedTab');
@@ -782,7 +786,7 @@ async function onNewTabTracked(tab, info) {
       onUpdated(tab.id, changedProps, renewedTab);
       metric.add('onUpdated notified');
     }
-    */
+    }
 
     const currentActiveTab = Tab.getActiveTab(tab.windowId);
     if (/*renewedTab*/tab.active &&
