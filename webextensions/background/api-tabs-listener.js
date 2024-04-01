@@ -532,17 +532,17 @@ async function onNewTabTracked(tab, info) {
 
     let treeForActionDetection = null;
     if (!configs.syncHandleNewTabs) {
-    const maybeNeedToFixupTree = (
-      (info.mayBeReplacedWithContainer ||
-       (!duplicated &&
-        !restored &&
-        !skipFixupTree)) &&
-      !info.positionedBySelf
-    );
-    // Tabs can be removed and detached while waiting, so cache them here for `detectTabActionFromNewPosition()`.
-    // This operation takes too much time so it should be skipped if unnecessary.
-    // See also: https://github.com/piroor/treestyletab/issues/2278#issuecomment-521534290
-    treeForActionDetection = maybeNeedToFixupTree ? Tree.snapshotForActionDetection(tab) : null;
+      const maybeNeedToFixupTree = (
+        (info.mayBeReplacedWithContainer ||
+         (!duplicated &&
+          !restored &&
+          !skipFixupTree)) &&
+        !info.positionedBySelf
+      );
+      // Tabs can be removed and detached while waiting, so cache them here for `detectTabActionFromNewPosition()`.
+      // This operation takes too much time so it should be skipped if unnecessary.
+      // See also: https://github.com/piroor/treestyletab/issues/2278#issuecomment-521534290
+      treeForActionDetection = maybeNeedToFixupTree ? Tree.snapshotForActionDetection(tab) : null;
     }
 
     if (bypassTabControl)
@@ -727,65 +727,65 @@ async function onNewTabTracked(tab, info) {
     }
 
     if (!configs.syncHandleNewTabs) {
-    // tab can be changed while creating!
-    const renewedTab = await browser.tabs.get(tab.id).catch(ApiTabs.createErrorHandler(ApiTabs.handleMissingTabError));
-    metric.add('renewedTab');
-    if (!renewedTab) {
-      log(`onNewTabTracked(${dumpTab(tab)}): tab ${tab.id} is closed while tracking`);
-      onCompleted();
-      tab.$TST.rejectOpened();
-      Tab.untrack(tab.id);
-      warnTabDestroyedWhileWaiting(tab.id, tab);
-      Tree.onAttached.removeListener(onTreeModified);
-      metric.add('untracked');
-      log('  tab is untracked while tracking after created, metric: ', metric);
-      return;
-    }
-
-    const updatedOpenerTabId = tab.openerTabId;
-    const changedProps = {};
-    for (const key of Object.keys(renewedTab)) {
-      const value = renewedTab[key];
-      if (tab[key] == value)
-        continue;
-      if (key == 'openerTabId' &&
-          info.trigger == 'tabs.onAttached' &&
-          value != tab.openerTabId &&
-          tab.openerTabId == tab.$TST.temporaryMetadata.get('updatedOpenerTabId')) {
-        log(`openerTabId of ${tab.id} is different from the raw value but it has been updated by TST while attaching, so don't detect as updated for now`);
-        continue;
+      // tab can be changed while creating!
+      const renewedTab = await browser.tabs.get(tab.id).catch(ApiTabs.createErrorHandler(ApiTabs.handleMissingTabError));
+      metric.add('renewedTab');
+      if (!renewedTab) {
+        log(`onNewTabTracked(${dumpTab(tab)}): tab ${tab.id} is closed while tracking`);
+        onCompleted();
+        tab.$TST.rejectOpened();
+        Tab.untrack(tab.id);
+        warnTabDestroyedWhileWaiting(tab.id, tab);
+        Tree.onAttached.removeListener(onTreeModified);
+        metric.add('untracked');
+        log('  tab is untracked while tracking after created, metric: ', metric);
+        return;
       }
-      changedProps[key] = value;
-    }
 
-    // When the active tab is duplicated, Firefox creates a duplicated tab
-    // with its `openerTabId` filled with the ID of the source tab.
-    // It is the `initialOpenerTabId`.
-    // On the other hand, TST may attach the duplicated tab to any other
-    // parent while it is initializing, based on a configuration
-    // `configs.autoAttachOnDuplicated`. It is the `updatedOpenerTabId`.
-    // At this scenario `renewedTab.openerTabId` becomes `initialOpenerTabId`
-    // and `updatedOpenerTabId` is lost.
-    // Thus we need to re-apply `updatedOpenerTabId` as the `openerTabId` of
-    // the tab again, to keep the tree structure managed by TST.
-    // See also: https://github.com/piroor/treestyletab/issues/2388
-    if ('openerTabId' in changedProps) {
-      log(`openerTabId of ${tab.id} is changed while creating: ${tab.openerTabId} (changed by someone) => ${changedProps.openerTabId} (original) `, configs.debug && new Error().stack);
-      if (duplicated &&
-          tab.active &&
-          changedProps.openerTabId == initialOpenerTabId &&
-          changedProps.openerTabId != updatedOpenerTabId) {
-        log(`restore original openerTabId of ${tab.id} for duplicated active tab: ${updatedOpenerTabId}`);
-        delete changedProps.openerTabId;
-        browser.tabs.update(tab.id, { openerTabId: updatedOpenerTabId });
+      const updatedOpenerTabId = tab.openerTabId;
+      const changedProps = {};
+      for (const key of Object.keys(renewedTab)) {
+        const value = renewedTab[key];
+        if (tab[key] == value)
+          continue;
+        if (key == 'openerTabId' &&
+            info.trigger == 'tabs.onAttached' &&
+            value != tab.openerTabId &&
+            tab.openerTabId == tab.$TST.temporaryMetadata.get('updatedOpenerTabId')) {
+          log(`openerTabId of ${tab.id} is different from the raw value but it has been updated by TST while attaching, so don't   detect as updated for now`);
+          continue;
+        }
+        changedProps[key] = value;
       }
-      metric.add('changed openerTabId handled');
-    }
 
-    if (Object.keys(renewedTab).length > 0) {
-      onUpdated(tab.id, changedProps, renewedTab);
-      metric.add('onUpdated notified');
-    }
+      // When the active tab is duplicated, Firefox creates a duplicated tab
+      // with its `openerTabId` filled with the ID of the source tab.
+      // It is the `initialOpenerTabId`.
+      // On the other hand, TST may attach the duplicated tab to any other
+      // parent while it is initializing, based on a configuration
+      // `configs.autoAttachOnDuplicated`. It is the `updatedOpenerTabId`.
+      // At this scenario `renewedTab.openerTabId` becomes `initialOpenerTabId`
+      // and `updatedOpenerTabId` is lost.
+      // Thus we need to re-apply `updatedOpenerTabId` as the `openerTabId` of
+      // the tab again, to keep the tree structure managed by TST.
+      // See also: https://github.com/piroor/treestyletab/issues/2388
+      if ('openerTabId' in changedProps) {
+        log(`openerTabId of ${tab.id} is changed while creating: ${tab.openerTabId} (changed by someone) => ${changedProps.  openerTabId} (original) `, configs.debug && new Error().stack);
+        if (duplicated &&
+            tab.active &&
+            changedProps.openerTabId == initialOpenerTabId &&
+            changedProps.openerTabId != updatedOpenerTabId) {
+          log(`restore original openerTabId of ${tab.id} for duplicated active tab: ${updatedOpenerTabId}`);
+          delete changedProps.openerTabId;
+          browser.tabs.update(tab.id, { openerTabId: updatedOpenerTabId });
+        }
+        metric.add('changed openerTabId handled');
+      }
+
+      if (Object.keys(renewedTab).length > 0) {
+        onUpdated(tab.id, changedProps, renewedTab);
+        metric.add('onUpdated notified');
+      }
     }
 
     const currentActiveTab = Tab.getActiveTab(tab.windowId);
