@@ -12,6 +12,7 @@ import {
   wait,
   configs,
   sanitizeForHTMLText,
+  waitUntilStartupOperationsUnblocked,
 } from '/common/common.js';
 import * as ApiTabs from '/common/api-tabs.js';
 import * as Constants from '/common/constants.js';
@@ -107,7 +108,7 @@ export async function init() {
       promisedWindows = getAllWindows();
     }),
     ContextualIdentities.init(),
-    configs.$loaded
+    configs.$loaded.then(waitUntilStartupOperationsUnblocked),
   ]));
   MetricsData.add('init: prepare');
   EventListenerManager.debug = configs.debug;

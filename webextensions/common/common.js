@@ -11,6 +11,7 @@ import EventListenerManager from '/extlib/EventListenerManager.js';
 import * as Constants from './constants.js';
 
 export const DEVICE_SPECIFIC_CONFIG_KEYS = mapAndFilter(`
+  blockStartupOperations
   chunkedSyncDataLocal0
   chunkedSyncDataLocal1
   chunkedSyncDataLocal2
@@ -553,6 +554,7 @@ export const configs = new Configs({
 
 
   debug:     false,
+  blockStartupOperations: false, // to collect performance profile around the initialization process
   runTestsParameters: '',
   syncEnabled: true,
   APIEnabled: true,
@@ -1213,6 +1215,23 @@ export function isFirefoxViewTab(tab) {
     tab?.url.startsWith('about:firefoxview') &&
     tab?.hidden
   );
+}
+
+
+export function waitUntilStartupOperationsUnblocked() {
+  if (!configs.blockStartupOperations)
+    return;
+
+  return new Promise((resolve, _reject) => {
+    const waitUntilUblocked = key => {
+      if (key != 'blockStartupOperations' ||
+          configs[key])
+        return;
+      configs.$removeObserver(waitUntilUblocked);
+      resolve();
+    };
+    configs.$addObserver(waitUntilUblocked);
+  });
 }
 
 

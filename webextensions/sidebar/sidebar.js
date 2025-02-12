@@ -18,6 +18,7 @@ import {
   isMacOS,
   isRTL,
   notify,
+  waitUntilStartupOperationsUnblocked,
 } from '/common/common.js';
 import * as ApiTabs from '/common/api-tabs.js';
 import * as Bookmark from '/common/bookmark.js';
@@ -193,7 +194,7 @@ export async function init() {
 
       return tabs;
     }),
-    configs.$loaded
+    configs.$loaded.then(waitUntilStartupOperationsUnblocked),
   ]);
   MetricsData.add('browser.tabs.query finish, configs are loaded.');
   EventListenerManager.debug = configs.debug;
