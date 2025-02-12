@@ -416,13 +416,14 @@ export class TabElement extends HTMLElement {
     //    * NO => Set "title" attribute for the legacy tooltip, if the tab is faviconized,
     //            or the tab has long title with overflow state.
 
-    const canRunScript = Permissions.isGrantedSync(Permissions.ALL_URLS);
+    const canCaptureTab = Permissions.isGrantedSync(Permissions.ALL_URLS);
     const canInjectScriptToTab = Permissions.canInjectScriptToTabSync(Tab.getActiveTab(TabsStore.getCurrentWindowId()));
-    this.useTabPreviewTooltip = (
+    this.useTabPreviewTooltip = !!(
       configs.tabPreviewTooltip &&
-      canRunScript &&
-      (canInjectScriptToTab ||
-       configs.tabPreviewTooltipInSidebar)
+      canCaptureTab &&
+      (((configs.tabPreviewTooltipRenderIn & Constants.kTAB_PREVIEW_PANEL_RENDER_IN_CONTENT) &&
+        canInjectScriptToTab) ||
+       (configs.tabPreviewTooltipRenderIn & Constants.kTAB_PREVIEW_PANEL_RENDER_IN_SIDEBAR))
     );
 
     let debugTooltip;

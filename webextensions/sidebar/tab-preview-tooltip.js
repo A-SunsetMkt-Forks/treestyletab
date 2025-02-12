@@ -257,25 +257,27 @@ function shouldMessageSend(message) {
 
 // returns succeeded or not (boolean)
 async function sendTabPreviewMessage(tabId, message, deferredResultResolver) {
-  const shouldFallbackToSidebar = configs.tabPreviewTooltipInSidebar && !message.hasCustomTooltip;
-  if (!tabId) { // in-sidebar mode
-    if (shouldFallbackToSidebar) {
-      log(`sendTabPreviewMessage(${message.type}): no tab specified, fallback to in-sidebar preview`);
+  const canRenderInSidebar = !!(configs.tabPreviewTooltipRenderIn & Constants.kTAB_PREVIEW_PANEL_RENDER_IN_SIDEBAR);
+  if (!tabId ||
+      !(configs.tabPreviewTooltipRenderIn & Constants.kTAB_PREVIEW_PANEL_RENDER_IN_CONTENT)) { // in-sidebar mode
+    if (canRenderInSidebar &&
+        !message.hasCustomTooltip) {
+      log(`sendTabPreviewMessage(${message.type}): no tab specified or sidebar only mode, fallback to in-sidebar preview`);
       return sendInSidebarTabPreviewMessage(message);
     }
     else {
-      log(`sendTabPreviewMessage(${message.type}): no tab specified, cancel`);
+      log(`sendTabPreviewMessage(${message.type}): no tab specified or not allowed, cancel`);
       return false;
     }
   }
 
   const retrying = !!deferredResultResolver;
-
   const tab = Tab.get(tabId);
   if (!tab)
     return false;
 
   const promisedPreviewURL = typeof message.previewURL == 'function' && message.previewURL();
+  const shouldFallbackToSidebar = canRenderInSidebar && !message.hasCustomTooltip;
 
   let frameId;
   let loadedInfo;
@@ -492,13 +494,14 @@ async function sendInSidebarTabPreviewMessage(message) {
 async function onTabSubstanceEnter(event) {
   const startAt = Date.now();
 
-  const canRunScript = Permissions.isGrantedSync(Permissions.ALL_URLS);
-  if (!canRunScript)
+  const canCaptureTab = Permissions.isGrantedSync(Permissions.ALL_URLS);
+  if (!canCaptureTab)
     return;
 
   const activeTab = Tab.getActiveTab(TabsStore.getCurrentWindowId());
 
-  if (!configs.tabPreviewTooltip) {;
+  if (!configs.tabPreviewTooltip ||
+      !(configs.tabPreviewTooltipRenderIn & Constants.kTAB_PREVIEW_PANEL_RENDER_IN_ANYWHERE)) {;
     sendTabPreviewMessage(activeTab.id, {
       type: 'treestyletab:hide-tab-preview',
     });
@@ -518,7 +521,7 @@ async function onTabSubstanceEnter(event) {
   );
   const previewURL = (
     hasPreview &&
-    canRunScript &&
+    canCaptureTab &&
     configs.tabPreviewTooltip &&
     (async () => { // We just define a getter function for now, because further operations may contain async operations and we can call this at there for more optimization.
       try {

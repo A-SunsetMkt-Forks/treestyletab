@@ -22,7 +22,7 @@ function log(...args) {
   internalLogger('background/migration', ...args);
 }
 
-const kCONFIGS_VERSION = 31;
+const kCONFIGS_VERSION = 32;
 const kFEATURES_VERSION = 9;
 
 export function migrateConfigs() {
@@ -313,6 +313,12 @@ export function migrateConfigs() {
           browser.sessions.removeWindowValue(win.id, Constants.kWINDOW_STATE_CACHED_SIDEBAR_COLLAPSED_DIRTY);
         }
       });
+
+    case 31:
+      if (configs.tabPreviewTooltipInSidebar !== null)
+        configs.tabPreviewTooltipRenderIn = configs.tabPreviewTooltipInSidebar ?
+          Constants.kTAB_PREVIEW_PANEL_RENDER_IN_ANYWHERE :
+          Constants.kTAB_PREVIEW_PANEL_RENDER_IN_CONTENT;
   }
   configs.configsVersion = kCONFIGS_VERSION;
 }

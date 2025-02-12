@@ -444,6 +444,11 @@ export const kINSERTION_CONTEXT_MOVED = 1;
 export const kINSERTION_CONTEXT_SHOWN = 2;
 export const kINSERTION_CONTEXT_CREATED = 3;
 
+export const kTAB_PREVIEW_PANEL_RENDER_NOWHERE    = 0;
+export const kTAB_PREVIEW_PANEL_RENDER_IN_SIDEBAR = 1 << 0;
+export const kTAB_PREVIEW_PANEL_RENDER_IN_CONTENT = 1 << 1;
+export const kTAB_PREVIEW_PANEL_RENDER_IN_ANYWHERE = kTAB_PREVIEW_PANEL_RENDER_IN_SIDEBAR | kTAB_PREVIEW_PANEL_RENDER_IN_CONTENT;
+
 export const kAGGRESSIVE_OPENER_TAB_DETECTION_RULES_WITH_URL = [
   { opener: /^about:addons/,
     child:  /^https:\/\/addons.mozilla.org\/([^\/]+\/)?[^\/]+\/search\// }
