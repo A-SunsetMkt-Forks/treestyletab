@@ -2369,7 +2369,8 @@ if (browser.action/* Manifest V2 */ || browser.browserAction/* Manifest V3 */) {
           Permissions.isGranted(item.permissions)
             .then(async granted => {
               const checked = granted && (!('key' in item) || checkedFromConfigs);
-              if (checked == granted)
+              if (checked == granted &&
+                  params.checked == granted)
                 return;
               item.checked = checked;
               await browser.menus.update(item.id, { checked }).catch(ApiTabs.createErrorSuppressor());
