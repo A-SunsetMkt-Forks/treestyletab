@@ -77,7 +77,10 @@ export function reposition(options = {}) {
   const maxWidth    = Size.getPinnedTabsContainerWidth();
   const faviconized = configs.faviconizePinnedTabs;
 
-  const width  = faviconized ? Size.getRenderedFavIconizedTabWidth() : maxWidth + Size.getFavIconizedTabXOffset();
+  const xOffset = faviconized ? 0 : Size.getFavIconizedTabXOffset();
+  const yOffset = faviconized ? Size.getFavIconizedTabYOffset() : Size.getTabYOffset();
+
+  const width  = faviconized ? Size.getRenderedFavIconizedTabWidth() : maxWidth + xOffset;
   const height = getTabHeight();
   const maxCol = faviconized ? Math.max(
     1,
@@ -90,7 +93,7 @@ export function reposition(options = {}) {
   const pinnedTabsAreaRatio = Math.min(Math.max(0, configs.maxPinnedTabsRowsAreaPercentage), 100) / 100;
   const allTabsAreaHeight   = Size.getAllTabsAreaSize() + GapCanceller.getOffset();
   mMaxVisibleRows = Math.max(1, Math.floor((allTabsAreaHeight * pinnedTabsAreaRatio) / height));
-  const contentsHeight = height * maxRow + (faviconized ? Size.getFavIconizedTabYOffset() : Size.getTabYOffset());
+  const contentsHeight = height * maxRow + yOffset;
   mAreaHeight = Math.min(
     contentsHeight,
     mMaxVisibleRows * height
@@ -147,7 +150,7 @@ export function reposition(options = {}) {
       //log('=> new row');
     }
   }
-  log('reposition: ', { maxWidth, faviconized, width, height, maxCol, maxRow, pinnedTabsAreaRatio, allTabsAreaHeight, mMaxVisibleRows, mAreaHeight });
+  log('reposition: ', { maxWidth, faviconized, width, height, maxCol, maxRow, pinnedTabsAreaRatio, allTabsAreaHeight, xOffset, yOffset, mMaxVisibleRows, mAreaHeight });
   log('overflow: contentsHeight > mAreaHeight : ', contentsHeight > mAreaHeight);
   SidebarTabs.pinnedContainer.classList.toggle('overflow', contentsHeight > mAreaHeight);
 }
