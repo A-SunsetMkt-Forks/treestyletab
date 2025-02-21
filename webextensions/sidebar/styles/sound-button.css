@@ -28,7 +28,7 @@ tab-sound-button {
 
 /* background circle */
 tab-sound-button::before {
-  background: var(--tab-text);
+  background: var(--tab-text-inverted);
   border-radius: 150%;
   content: "";
   display: inline-block;
@@ -51,7 +51,7 @@ tab-sound-button::after {
   background: none no-repeat center / 100%;
   content: "";
   display: inline-block;
-  fill: var(--tab-text-inverted);
+  fill: var(--tab-text);
   height: var(--sound-button-size);
   inset-inline-end: 0;
   position: absolute;
@@ -59,7 +59,7 @@ tab-sound-button::after {
   width: var(--sound-button-size);
 }
 :root.simulate-svg-context-fill tab-sound-button::after {
-  background: var(--tab-text-inverted);
+  background: var(--tab-text);
   mask-position: center;
   mask-repeat: no-repeat;
   mask-size: 100%;
